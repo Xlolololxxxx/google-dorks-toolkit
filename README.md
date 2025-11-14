@@ -6,10 +6,14 @@ GoogleDorks Toolkit is a Python script designed to help security researchers and
 
 ## Features
 
+- **Parallel Processing**: Process multiple dorks concurrently for faster results with configurable worker threads.
+- **Auto Rate Limiting**: Intelligent rate limiting with adaptive backoff to avoid Google blocks automatically.
+- **URL Normalization**: Automatically handles missing https:// and www prefixes for domains.
+- **Real-time JSON Output**: Results are saved to JSON file as they're found, with automatic data preservation.
+- **Graceful Error Handling**: Continues processing even if errors occur, saving partial results.
 - **Customizable Dorks**: Users can provide their own list of dorks to be used in the Google search queries with huge list of default Google Dorks list.
 - **Domain Search**: The tool allows users to specify a target domain for the Google dorking process.
-- **Results Output**: Search results are saved to an output file, providing a convenient way to review and analyze the findings.
-- **Detailed Results**: Not only the vulnerable webapps and the dork, but also the auther and reference link of the dork for more information.
+- **Detailed Results**: Not only the vulnerable webapps and the dork, but also the author and reference link of the dork for more information.
 - **Vulnerability Disclosure and Bug Bounty Checker**: Optional detection of vulnerabilities by searching for the identified domains in existing file `OpenForReport.txt` which own VDP or BBP programs to report legally.
 
 ## Usage
@@ -44,17 +48,77 @@ cd google-dorks-toolkit
 
 ## Command-line Arguments
 
-    - `-d`, `--domain`: Specify the target domain for Google dorking (required).
-    - `-n`, `--number_of_pages`: Set the number of pages to search (required).
-    - `-t`, `--time`: Specify the time between requests to avoid being blocked by Google (required).
-    - `-o`, `--output`: (Optional) Specify the output file name for saving the results.
+    - `-d`, `--domain`: Specify the target domain for Google dorking (required). URLs are auto-normalized.
+    - `-n`, `--number_of_pages`: Set the number of pages to search per dork (optional, default: 3).
+    - `-o`, `--output`: (Optional) Specify the output JSON file name. If not specified, automatically generated from domain name with timestamp.
+    - `-w`, `--workers`: (Optional) Number of parallel workers for concurrent processing (default: 3).
+    - `--initial-delay`: (Optional) Initial delay between requests in seconds (default: 2.0). Auto-adjusts based on rate limiting.
     - `--search`: (Optional) Search matched domains in OpenForReport.txt, note that the output should be yes or y only.
-    - `-l`, `--list`: (Optional) Add your own dorks list.
+    - `-l`, `--list`: (Optional) Add your own dorks list (default: dorks.txt).
 
-## Example
+## Examples
+
+### Basic usage (minimal command):
+```bash
+python GoogleDorks-toolkit.py -d example.com
 ```
-python GoogleDorks-toolkit.py -d example.com -n 5 -t 5 -o results.txt --search yes
+This will:
+- Search example.com with 3 pages per dork (default)
+- Use 3 parallel workers (default)
+- Auto-generate output file: `example_dorks_YYYYMMDD_HHMMSS.json`
+- Use automatic rate limiting
+
+### Advanced usage:
+```bash
+python GoogleDorks-toolkit.py -d example.com -n 5 -w 5 -o custom_results.json --search yes
 ```
+
+### URL normalization examples:
+```bash
+# All of these will be normalized to https://www.example.com
+python GoogleDorks-toolkit.py -d example.com
+python GoogleDorks-toolkit.py -d www.example.com
+python GoogleDorks-toolkit.py -d https://example.com
+
+# Subdomains won't get www added (correctly kept as-is):
+python GoogleDorks-toolkit.py -d api.example.com  # → https://api.example.com
+```
+
+## Output Format
+
+Results are saved in JSON format with the following structure:
+
+```json
+{
+  "scan_info": {
+    "start_time": "2025-11-14T10:30:00",
+    "end_time": "2025-11-14T10:45:00",
+    "domain": "https://www.example.com",
+    "total_dorks": 47,
+    "total_urls_found": 125
+  },
+  "results": [
+    {
+      "dork": "intitle:\"Index of/\"",
+      "author": "Exploit-db",
+      "reference": "https://www.exploit-db.com/google-hacking-database",
+      "severity": "low",
+      "urls": [
+        "https://www.example.com/path1",
+        "https://www.example.com/path2"
+      ],
+      "url_count": 2,
+      "timestamp": "2025-11-14T10:31:00"
+    }
+  ]
+}
+```
+
+**Features:**
+- Results are written in real-time as they're found
+- If interrupted (Ctrl+C), partial results are preserved
+- Timestamps track when each dork was processed
+- Scan info provides overview statistics
 
 ## Developers
 
